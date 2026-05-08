@@ -108,6 +108,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
+
+
               <div>
                 <label className="block mb-2 text-sm text-foreground">Email Address</label>
                 <div className="relative">

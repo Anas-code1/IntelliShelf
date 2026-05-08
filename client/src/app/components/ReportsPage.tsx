@@ -32,6 +32,20 @@ export const ReportsPage: React.FC = () => {
   }
 
   const { summary, monthlyActivity, revenueBreakdown, categoryPerformance } = reportData;
+
+  const handleExportCSV = (filename: string, data: any[]) => {
+    if (!data || !data.length) return alert('No data to export');
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(obj => Object.values(obj).join(',')).join('\n');
+    const csv = `${headers}\n${rows}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -46,7 +60,7 @@ export const ReportsPage: React.FC = () => {
             <option>Last 6 Months</option>
             <option>Last Year</option>
           </Select>
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => window.print()}>
             <Download className="w-5 h-5 mr-2" />
             Export PDF
           </Button>
@@ -199,19 +213,19 @@ export const ReportsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => handleExportCSV('monthly-summary', monthlyActivity)}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Monthly Summary
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => alert('Detailed Member Report will be emailed to admin.')}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Member Report
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => alert('Detailed Transaction Log will be emailed to admin.')}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Transaction Log
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => handleExportCSV('financial-report', revenueBreakdown)}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Financial Report
               </Button>

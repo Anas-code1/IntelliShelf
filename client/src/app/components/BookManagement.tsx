@@ -24,9 +24,14 @@ export const BookManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'librarian' | 'member'>('member');
 
   useEffect(() => {
     fetchBooks();
+    const userInfo = localStorage.getItem('userInfo');
+    if (userInfo) {
+      setUserRole(JSON.parse(userInfo).role);
+    }
   }, [searchTerm, filterCategory]);
 
   const fetchBooks = async () => {
@@ -85,13 +90,15 @@ export const BookManagement: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Book Management</h1>
-          <p className="text-muted-foreground">Manage your library's book collection.</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">{userRole === 'member' ? 'Browse Books' : 'Book Management'}</h1>
+          <p className="text-muted-foreground">{userRole === 'member' ? 'Explore and reserve books from our collection.' : 'Manage your library\'s book collection.'}</p>
         </div>
-        <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Book
-        </Button>
+        {userRole !== 'member' && (
+          <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-5 h-5 mr-2" />
+            Add New Book
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -158,20 +165,36 @@ export const BookManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditBook(book)}
-                          className="p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteBook(book._id)}
-                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {userRole === 'member' ? (
+                        <Button variant="primary" size="sm" onClick={async () => {
+                          try {
+                            await api.post('/api/transactions/reserve', { bookId: book._id });
+                            alert('Book reserved successfully!');
+                            fetchBooks();
+                          } catch (err: any) {
+                            alert(err.response?.data?.message || 'Failed to reserve book');
+                          }
+                        }}>
+                          Reserve
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditBook(book)}
+                            className="p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          {userRole === 'admin' && (
+                            <button
+                              onClick={() => handleDeleteBook(book._id)}
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -163,32 +163,7 @@ export const MemberDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>AI Recommended For You</CardTitle>
-          <Button variant="ghost" size="sm">View All</Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {books.slice(0, 4).map((book) => (
-              <div key={book._id} className="group p-4 rounded-lg border border-border hover:shadow-lg hover:border-primary transition-all cursor-pointer">
-                <div className="w-full h-48 rounded-lg mb-3 flex flex-col items-center justify-center text-white" style={{ backgroundColor: '#8B5CF6' }}>
-                  <BookOpen className="w-12 h-12 mb-2" />
-                  <div className="px-3 py-1 bg-white/20 backdrop-blur rounded-full">
-                    <span className="text-sm font-semibold">95% Match</span>
-                  </div>
-                </div>
-                <h4 className="font-semibold text-foreground mb-1">{book.title}</h4>
-                <p className="text-sm text-muted-foreground mb-2">{book.author}</p>
-                <p className="text-xs text-muted-foreground mb-3">Similar to books you've enjoyed</p>
-                <Button variant="primary" size="sm" className="w-full">
-                  Reserve Book
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
 
       <Card>
         <CardHeader>

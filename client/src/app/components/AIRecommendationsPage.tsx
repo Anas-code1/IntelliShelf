@@ -45,9 +45,14 @@ export const AIRecommendationsPage: React.FC = () => {
     setLoading(true);
     try {
       const { data } = await api.get('/api/books/recommendations');
-      setRecommendations(data.map((d: any, i: number) => ({...d, cover: ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#2563EB'][i%6] })));
-    } catch (err) {
+      if (Array.isArray(data)) {
+        setRecommendations(data.map((d: any, i: number) => ({...d, cover: ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#2563EB'][i%6] })));
+      } else {
+        alert('Error: AI did not return a valid list of books.');
+      }
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || 'Failed to fetch recommendations. Please check server logs.');
     } finally {
       setLoading(false);
     }

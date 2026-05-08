@@ -8,14 +8,20 @@ const getRecommendations = async (req, res) => {
 
     // Get member's transaction history to understand preferences
     const transactions = await Transaction.find({ member: memberId }).populate('book');
-    const readBooks = transactions.map(t => `${t.book.title} by ${t.book.author} (${t.book.category})`);
+    const readBooks = transactions
+      .filter(t => t.book != null)
+      .map(t => `${t.book.title} by ${t.book.author} (${t.book.category})`);
 
     // Get available library books to recommend from
     const availableBooks = await Book.find({ available: { $gt: 0 } }).select('title author category _id rating');
     const catalog = availableBooks.map(b => `${b.title} by ${b.author} (ID: ${b._id})`);
 
     // Initialize Gemini
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+    if (!apiKey) {
+      console.warn("Gemini API key is missing or empty.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
     
     let prompt = `You are an AI Librarian. 
 The user has read the following books: ${readBooks.length > 0 ? readBooks.join(', ') : 'None yet.'}.
@@ -44,12 +50,20 @@ Respond EXACTLY in this JSON array format, and nothing else:
     const text = response.text;
     // Extract JSON from response (in case Gemini wraps it in markdown blocks)
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const recommendations = JSON.parse(jsonStr);
+    
+    let recommendations = [];
+    try {
+      recommendations = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response as JSON:', parseError);
+      console.error('Raw response was:', text);
+      return res.status(500).json({ message: 'AI returned malformed data' });
+    }
 
     res.json(recommendations);
   } catch (error) {
     console.error('Gemini API Error:', error);
-    res.status(500).json({ message: 'Failed to generate recommendations' });
+    res.status(500).json({ message: `Failed to generate recommendations: ${error.message}` });
   }
 };
 
