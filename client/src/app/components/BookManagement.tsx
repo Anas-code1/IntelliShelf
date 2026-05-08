@@ -15,6 +15,7 @@ interface Book {
   quantity: number;
   available: number;
   status: string;
+  cover?: string;
 }
 
 export const BookManagement: React.FC = () => {
@@ -103,21 +104,21 @@ export const BookManagement: React.FC = () => {
 
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <div className="flex flex-col md:flex-row w-full gap-4 mb-8">
+            <div className="flex-1 w-full relative shadow-sm rounded-xl">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-6 h-6" />
               <input
                 type="text"
                 placeholder="Search by title, author, or ISBN..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                className="w-full min-w-[250px] pl-12 pr-4 py-3.5 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-0 focus:border-primary text-foreground text-lg transition-all"
               />
             </div>
             <Select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="md:w-48"
+              className="w-full md:w-56 h-[56px] text-lg rounded-xl border-2 border-border flex-shrink-0"
             >
               <option value="all">All Categories</option>
               <option value="Fiction">Fiction</option>
@@ -128,56 +129,89 @@ export const BookManagement: React.FC = () => {
             </Select>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ISBN</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Title</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Author</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Category</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Quantity</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Available</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBooks.map((book) => (
-                  <tr key={book._id} className="border-b border-border last:border-0 hover:bg-accent transition-colors">
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{book.isbn}</td>
-                    <td className="py-3 px-4 text-sm font-medium text-foreground">{book.title}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{book.author}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{book.category}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{book.quantity}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{book.available}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          book.status === 'Available'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : book.status === 'Low Stock'
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}
-                      >
-                        {book.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {userRole === 'member' ? (
-                        <Button variant="primary" size="sm" onClick={async () => {
-                          try {
-                            await api.post('/api/transactions/reserve', { bookId: book._id });
-                            alert('Book reserved successfully!');
-                            fetchBooks();
-                          } catch (err: any) {
-                            alert(err.response?.data?.message || 'Failed to reserve book');
-                          }
-                        }}>
-                          Reserve
-                        </Button>
-                      ) : (
+          {userRole === 'member' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredBooks.map((book) => (
+                <div key={book._id} className="group flex flex-col p-4 rounded-xl border border-border bg-card hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer overflow-hidden relative">
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      book.status === 'Available' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                      book.status === 'Low Stock' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
+                      'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                    }`}>
+                      {book.status}
+                    </span>
+                  </div>
+                  <div className="w-full h-48 rounded-lg mb-4 flex flex-col items-center justify-center bg-gradient-to-br from-primary/80 to-blue-600 text-white shadow-inner relative overflow-hidden">
+                    {book.cover ? (
+                      <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <BookOpen className="w-16 h-16 opacity-90 group-hover:scale-110 transition-transform duration-300" />
+                    )}
+                    <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent"></div>
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-1" title={book.title}>{book.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3">{book.author}</p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="px-2 py-1 bg-accent rounded-md text-xs font-medium text-muted-foreground">{book.category}</span>
+                      <span className="text-xs text-muted-foreground">• {book.available} left</span>
+                    </div>
+                    <div className="mt-auto pt-4 border-t border-border">
+                      <Button variant="primary" className="w-full" onClick={async () => {
+                        try {
+                          await api.post('/api/transactions/reserve', { bookId: book._id });
+                          alert('Book reserved successfully!');
+                          fetchBooks();
+                        } catch (err: any) {
+                          alert(err.response?.data?.message || 'Failed to reserve book');
+                        }
+                      }}>
+                        Reserve Book
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ISBN</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Title</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Author</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Category</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Quantity</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Available</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBooks.map((book) => (
+                    <tr key={book._id} className="border-b border-border last:border-0 hover:bg-accent transition-colors">
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{book.isbn}</td>
+                      <td className="py-3 px-4 text-sm font-medium text-foreground">{book.title}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{book.author}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{book.category}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{book.quantity}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{book.available}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            book.status === 'Available'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : book.status === 'Low Stock'
+                              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}
+                        >
+                          {book.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEditBook(book)}
@@ -194,13 +228,13 @@ export const BookManagement: React.FC = () => {
                             </button>
                           )}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
