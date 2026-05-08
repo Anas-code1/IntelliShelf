@@ -1,0 +1,229 @@
+I am building a medium-level full stack web application.
+
+I already have multiple software engineering/project management documents prepared, including:
+
+- Business Case
+- Feasibility Report
+- Project Charter
+- Work Breakdown Structure
+- Resource Allocation
+- Quality Management Plan
+- Risk Management
+- Gantt Chart / CPM
+- Requirements Documentation
+- Requirements Validation Report
+- Scope, Constraints, Assumptions
+
+Your task is to act as:
+1. Senior Product Manager
+2. Senior Software Architect
+3. UX Strategist
+4. Technical Documentation Expert
+
+I will upload all the PDFs.
+
+Your job is to deeply analyze all documents and create ONE MASTER DOCUMENT that clearly explains the entire application idea and system in a way that:
+- Figma AI tools can generate accurate UI/UX
+- AI coding tools like Antigravity, Lovable, Bolt, Cursor, Replit AI, or Claude Code can generate the application properly
+- developers can directly start implementation
+- stakeholders can understand the system easily
+
+IMPORTANT:
+Do NOT summarize vaguely.
+I want a highly detailed, structured, professional specification document.
+
+The output should be extremely organized and written like a real startup/product requirements document.
+
+Generate the document with the following structure:
+
+# 1. Project Overview
+- App name
+- Problem statement
+- Purpose of the system
+- Vision
+- Objectives
+- Target users
+- User pain points
+- Expected outcomes
+
+# 2. Business Logic
+Explain exactly how the system works in real life.
+Describe the workflow from start to finish.
+
+# 3. User Roles
+For each role:
+- permissions
+- dashboard access
+- features
+- limitations
+
+# 4. Complete Feature Breakdown
+For EVERY feature include:
+- purpose
+- user flow
+- frontend behavior
+- backend behavior
+- validations
+- edge cases
+- database interaction
+- notifications/emails if any
+
+# 5. Detailed User Flows
+Write step-by-step flows like:
+- signup/login flow
+- forgot password flow
+- CRUD operations
+- booking/order/payment flow
+- admin management flow
+- search/filter flow
+- etc
+
+# 6. Full UI/UX Breakdown
+For EVERY screen/page include:
+- page purpose
+- sections
+- buttons
+- forms
+- tables
+- cards
+- navbar/sidebar
+- modals
+- colors/mood suggestions
+- responsive behavior
+- mobile considerations
+- animations/interactions
+
+This section should be detailed enough for Figma AI to generate proper designs.
+
+IMPORTANT TECHNICAL CONSTRAINTS:
+
+This application MUST be designed specifically for the MERN stack.
+
+Use:
+- MongoDB
+- Express.js
+- React.js
+- Node.js
+
+Preferred ecosystem:
+- React + Vite
+- Tailwind CSS
+- Express REST API
+- MongoDB Atlas
+- JWT Authentication
+- Cloudinary for media storage
+- Redux Toolkit or Context API for state management
+- React Router
+- Axios
+- Mongoose ORM
+
+Architecture Requirements:
+- Proper separation of frontend and backend
+- RESTful API structure
+- Modular folder structure
+- Reusable React components
+- MVC architecture on backend
+- Protected routes
+- Role-based authentication
+- Clean API response structure
+- Environment variable management
+- Production-ready scalable structure
+
+IMPORTANT:
+When generating frontend architecture, backend architecture, database design, and AI coding instructions, optimize everything specifically for MERN stack best practices.
+
+For frontend:
+- use component-based architecture
+- reusable UI components
+- hooks-based React
+- proper state management
+- responsive dashboard layouts
+
+For backend:
+- Express middleware architecture
+- controllers/services/routes separation
+- JWT auth flow
+- MongoDB schema relationships
+- async error handling
+- scalable API structure
+
+For database:
+- design collections optimized for MongoDB
+- use embedded vs referenced documents appropriately
+- include indexes where needed
+
+For deployment:
+Recommend:
+- Vercel (frontend)
+- Render/Railway (backend)
+- MongoDB Atlas (database)
+
+Generate the final documentation as if a professional MERN stack SaaS application is being built.
+
+# 12. Scalability Considerations
+Explain:
+- future scaling
+- caching
+- pagination
+- modular architecture
+- microservices possibility
+- CDN usage
+
+# 13. AI Coding Instructions
+Create a dedicated section specifically for AI coding agents.
+Include:
+- coding standards
+- naming conventions
+- architecture rules
+- reusable patterns
+- API response format
+- folder conventions
+- clean code principles
+
+# 14. Figma AI Instructions
+Create a dedicated section specifically for Figma AI tools.
+Include:
+- design system
+- typography
+- spacing
+- colors
+- component hierarchy
+- UI style
+- dashboard layout suggestions
+- responsiveness instructions
+
+# 15. Development Roadmap
+Break the project into:
+Phase 1
+Phase 2
+Phase 3
+etc.
+
+Include priorities.
+
+# 16. MVP Definition
+Clearly define:
+- core features only
+- optional features
+- future features
+
+# 17. Final Developer Summary
+Create a concise but highly technical summary developers can instantly understand.
+
+IMPORTANT OUTPUT RULES:
+- Be extremely detailed
+- Avoid generic explanations
+- Infer missing details intelligently from the uploaded PDFs
+- Maintain consistency across all sections
+- Use professional formatting
+- Use headings/subheadings
+- Use tables where useful
+- Think like a real SaaS architect
+- Make this document implementation-ready
+
+FINAL GOAL:
+The final document should be detailed enough that:
+1. Figma AI can design the entire app
+2. AI coding tools can generate most of the project
+3. A human developer can directly start coding
+4. The project structure becomes crystal clear
