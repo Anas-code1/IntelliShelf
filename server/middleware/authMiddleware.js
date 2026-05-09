@@ -20,7 +20,7 @@ const protect = async (req, res, next) => {
 };
 
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.role.toLowerCase() === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as an admin' });
@@ -28,7 +28,7 @@ const adminOnly = (req, res, next) => {
 };
 
 const staffOnly = (req, res, next) => {
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'librarian')) {
+  if (req.user && (req.user.role.toLowerCase() === 'admin' || req.user.role.toLowerCase() === 'librarian')) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as staff' });

@@ -44,9 +44,11 @@ export const LibrarianDashboard: React.FC = () => {
   const handleIssueBook = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const normalizedBook = issueBookId.trim();
+      const normalizedMember = issueMemberId.trim();
       await api.post('/api/transactions/issue', {
-        bookId: issueBookId,
-        memberId: issueMemberId,
+        bookId: normalizedBook,
+        memberId: normalizedMember,
         days: parseInt(issueDays)
       });
       alert('Book issued successfully!');
@@ -54,14 +56,15 @@ export const LibrarianDashboard: React.FC = () => {
       setIssueMemberId('');
       fetchTransactions();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to issue book. Ensure IDs are correct MongoDB ObjectIDs.');
+      alert(err.response?.data?.message || 'Failed to issue book.');
     }
   };
 
   const handleReturnBook = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post(`/api/transactions/return/${returnTransactionId}`);
+      const normalizedTransaction = returnTransactionId.trim();
+      await api.post(`/api/transactions/return/${normalizedTransaction}`);
       alert('Book returned successfully!');
       setReturnTransactionId('');
       fetchTransactions();
@@ -158,7 +161,7 @@ export const LibrarianDashboard: React.FC = () => {
               />
               <Input
                 label="Member ID"
-                placeholder="Enter member ID"
+                placeholder="Enter member ID or email"
                 value={issueMemberId}
                 onChange={(e) => setIssueMemberId(e.target.value)}
                 required
@@ -183,7 +186,7 @@ export const LibrarianDashboard: React.FC = () => {
             <form onSubmit={handleReturnBook} className="space-y-4">
               <Input
                 label="Transaction ID"
-                placeholder="Enter Transaction ID"
+                placeholder="Enter active transaction ID"
                 value={returnTransactionId}
                 onChange={(e) => setReturnTransactionId(e.target.value)}
                 required
@@ -246,6 +249,7 @@ export const LibrarianDashboard: React.FC = () => {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Book Title</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Member</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Transaction ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Time</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
@@ -256,6 +260,9 @@ export const LibrarianDashboard: React.FC = () => {
                   <tr key={transaction._id} className="border-b border-border last:border-0 hover:bg-accent transition-colors">
                     <td className="py-3 px-4 text-sm text-foreground">{transaction.book?.title}</td>
                     <td className="py-3 px-4 text-sm text-foreground">{transaction.member?.name}</td>
+                    <td className="py-3 px-4 text-xs text-muted-foreground font-mono">
+                      {transaction.status === 'Active' ? transaction._id : '-'}
+                    </td>
                     <td className="py-3 px-4 text-sm text-foreground">{transaction.status}</td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{new Date(transaction.createdAt || transaction.issueDate).toLocaleTimeString()}</td>
                     <td className="py-3 px-4">

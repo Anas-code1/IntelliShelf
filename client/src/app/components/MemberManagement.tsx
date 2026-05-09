@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './Card';
 import { Button } from './Button';
-import { Search, UserPlus, Mail, RotateCcw } from 'lucide-react';
-import { Select } from './Input';
+import { Search, UserPlus, Mail, Trash2 } from 'lucide-react';
+import { Input, Select } from './Input';
+import { Modal } from './Modal';
 
 import api from '../../api';
 
@@ -18,6 +19,13 @@ export const MemberManagement: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'member'
+  });
 
   useEffect(() => {
     fetchMembers();
@@ -39,10 +47,6 @@ export const MemberManagement: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleResetPassword = async (memberId: string, memberName: string) => {
-    alert(`Cannot reset password automatically yet. Feature coming soon!`);
-  };
-
   const handleSendEmail = (memberId: string, memberEmail: string) => {
     window.location.href = `mailto:${memberEmail}`;
   };
@@ -58,6 +62,23 @@ export const MemberManagement: React.FC = () => {
     }
   };
 
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/api/auth/register', newMember);
+      alert('Member created successfully');
+      setIsAddModalOpen(false);
+      setNewMember({ name: '', email: '', password: '', role: 'member' });
+      fetchMembers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add member');
+    }
+  };
+
+  const totalMembers = members.length;
+  const activeMembers = members.filter(member => member.role === 'member').length;
+  const staffMembers = members.filter(member => ['admin', 'librarian'].includes(member.role)).length;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -65,7 +86,7 @@ export const MemberManagement: React.FC = () => {
           <h1 className="text-3xl font-bold text-foreground mb-2">Member Management</h1>
           <p className="text-muted-foreground">Manage library members and their accounts.</p>
         </div>
-        <Button variant="primary">
+        <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
           <UserPlus className="w-5 h-5 mr-2" />
           Add New Member
         </Button>
@@ -77,7 +98,7 @@ export const MemberManagement: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Members</p>
-                <h3 className="text-2xl font-bold text-foreground">2,341</h3>
+                <h3 className="text-2xl font-bold text-foreground">{totalMembers}</h3>
               </div>
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                 <UserPlus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -90,8 +111,8 @@ export const MemberManagement: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Active Members</p>
-                <h3 className="text-2xl font-bold text-foreground">2,215</h3>
+                <p className="text-sm text-muted-foreground mb-1">Member Accounts</p>
+                <h3 className="text-2xl font-bold text-foreground">{activeMembers}</h3>
               </div>
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
                 <UserPlus className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -104,8 +125,8 @@ export const MemberManagement: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Suspended</p>
-                <h3 className="text-2xl font-bold text-foreground">126</h3>
+                <p className="text-sm text-muted-foreground mb-1">Staff Accounts</p>
+                <h3 className="text-2xl font-bold text-foreground">{staffMembers}</h3>
               </div>
               <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
                 <UserPlus className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -186,7 +207,7 @@ export const MemberManagement: React.FC = () => {
                           className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
                           title="Delete Member"
                         >
-                          <RotateCcw className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -207,6 +228,60 @@ export const MemberManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Member"
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={() => document.getElementById('submit-add-member')?.click()}>
+              Create
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAddMember} className="space-y-4">
+          <Input
+            label="Name"
+            placeholder="Enter full name"
+            value={newMember.name}
+            onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="Enter email address"
+            value={newMember.email}
+            onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+            required
+          />
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Enter temporary password"
+            value={newMember.password}
+            onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+            required
+          />
+          <Select
+            label="Role"
+            value={newMember.role}
+            onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+          >
+            <option value="member">Member</option>
+            <option value="librarian">Librarian</option>
+          </Select>
+          <Button id="submit-add-member" type="submit" className="hidden">
+            Create
+          </Button>
+        </form>
+      </Modal>
     </div>
   );
 };

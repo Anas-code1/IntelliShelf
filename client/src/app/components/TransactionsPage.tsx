@@ -33,6 +33,16 @@ export const TransactionsPage: React.FC = () => {
     }
   };
 
+  const handleApprove = async (transactionId: string) => {
+    try {
+      await api.post(`/api/transactions/approve/${transactionId}`);
+      alert('Reservation approved successfully!');
+      fetchTransactions();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to approve reservation');
+    }
+  };
+
   const issuedTransactions = transactions.filter(t => t.status === 'Active' || t.status === 'Reserved');
   const returnedTransactions = transactions.filter(t => t.status === 'Returned');
   const overdueTransactions = transactions.filter(t => t.status === 'Active' && new Date(t.dueDate) < new Date());
@@ -140,6 +150,7 @@ export const TransactionsPage: React.FC = () => {
                     <tr className="border-b border-border">
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Book Title</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Member</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Transaction ID</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Issue Date</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Due Date</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
@@ -150,12 +161,25 @@ export const TransactionsPage: React.FC = () => {
                       <tr key={transaction._id} className="border-b border-border last:border-0 hover:bg-accent transition-colors">
                         <td className="py-3 px-4 text-sm font-medium text-foreground">{transaction.book?.title}</td>
                         <td className="py-3 px-4 text-sm text-foreground">{transaction.member?.name}</td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground font-mono">
+                          {transaction.status === 'Active' ? transaction._id : '-'}
+                        </td>
                         <td className="py-3 px-4 text-sm text-muted-foreground">{new Date(transaction.issueDate).toLocaleDateString()}</td>
                         <td className="py-3 px-4 text-sm text-muted-foreground">{new Date(transaction.dueDate).toLocaleDateString()}</td>
                         <td className="py-3 px-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${transaction.status === 'Reserved' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {transaction.status}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${transaction.status === 'Reserved' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {transaction.status}
+                            </span>
+                            {transaction.status === 'Reserved' && (
+                              <button
+                                onClick={() => handleApprove(transaction._id)}
+                                className="text-xs bg-primary text-primary-foreground hover:bg-primary/90 px-2 py-1 rounded transition-colors"
+                              >
+                                Approve
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

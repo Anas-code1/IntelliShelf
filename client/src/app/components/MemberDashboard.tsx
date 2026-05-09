@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './Card';
-import { BookOpen, Clock, Star, TrendingUp, Calendar } from 'lucide-react';
+import { BookOpen, Clock, Star, Calendar } from 'lucide-react';
 import { Button } from './Button';
 import api from '../../api';
 
 interface Transaction {
   _id: string;
   book: { _id: string; title: string; author: string; cover?: string };
+  issueDate: string;
   dueDate: string;
+  returnDate?: string;
+  renewedOn?: string;
   status: string;
   fine: number;
 }
@@ -17,12 +20,15 @@ interface Book {
   title: string;
   author: string;
   category: string;
+  available: number;
   rating?: number;
 }
 
 export const MemberDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
+  const [activeTab, setActiveTab] = useState<'Borrowed' | 'Reserved' | 'History'>('Borrowed');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -30,6 +36,7 @@ export const MemberDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [transRes, booksRes] = await Promise.all([
         api.get('/api/transactions'),
         api.get('/api/books')
@@ -38,6 +45,8 @@ export const MemberDashboard: React.FC = () => {
       setBooks(booksRes.data);
     } catch (error) {
       console.error('Error fetching data', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,7 +61,13 @@ export const MemberDashboard: React.FC = () => {
   };
 
   const borrowedBooks = transactions.filter(t => t.status === 'Active');
-  const pastBooks = transactions.filter(t => t.status === 'Returned');
+  const reservedBooks = transactions.filter(t => t.status === 'Reserved');
+  const pastBooks = transactions
+    .filter(t => t.status === 'Returned')
+    .sort((a, b) => new Date(b.returnDate || b.issueDate).getTime() - new Date(a.returnDate || a.issueDate).getTime());
+  const orderedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.returnDate || b.issueDate).getTime() - new Date(a.returnDate || a.issueDate).getTime()
+  );
   const totalFines = transactions.reduce((sum, t) => sum + (t.fine || 0), 0);
 
   return (
@@ -81,6 +96,20 @@ export const MemberDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm text-muted-foreground mb-1">Books Reserved</p>
+                <h3 className="text-2xl font-bold text-foreground">{reservedBooks.length}</h3>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card hover>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm text-muted-foreground mb-1">Books Read</p>
                 <h3 className="text-2xl font-bold text-foreground">{pastBooks.length}</h3>
               </div>
@@ -95,21 +124,7 @@ export const MemberDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Reading Streak</p>
-                <h3 className="text-2xl font-bold text-foreground">12 days</h3>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card hover>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Pending Fines</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Fines</p>
                 <h3 className="text-2xl font-bold text-foreground">${totalFines}</h3>
               </div>
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
@@ -121,13 +136,41 @@ export const MemberDashboard: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Currently Borrowed</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+          <CardTitle>My Library Activity</CardTitle>
+          <div className="flex space-x-2">
+            <Button
+              variant={activeTab === 'Borrowed' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('Borrowed')}
+            >
+              Borrowed
+            </Button>
+            <Button
+              variant={activeTab === 'Reserved' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('Reserved')}
+            >
+              Reserved
+            </Button>
+            <Button
+              variant={activeTab === 'History' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('History')}
+            >
+              History
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
+          {loading && (
+            <div className="text-center py-8 text-muted-foreground">Loading your activity...</div>
+          )}
+          {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {borrowedBooks.map((transaction) => {
+            {activeTab === 'Borrowed' && borrowedBooks.map((transaction) => {
               const daysLeft = Math.ceil((new Date(transaction.dueDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+              const canRenew = daysLeft > 0;
               return (
               <div key={transaction._id} className="p-4 rounded-lg border border-border hover:shadow-md transition-all">
                 <div className="flex gap-4">
@@ -135,8 +178,8 @@ export const MemberDashboard: React.FC = () => {
                     <BookOpen className="w-8 h-8" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-foreground mb-1">{transaction.book?.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-2">{transaction.book?.author}</p>
+                    <h4 className="font-semibold text-foreground mb-1">{transaction.book?.title || 'Unknown Book'}</h4>
+                    <p className="text-sm text-muted-foreground mb-2">{transaction.book?.author || 'Unknown Author'}</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
                       <span>Due: {new Date(transaction.dueDate).toLocaleDateString()}</span>
@@ -152,18 +195,93 @@ export const MemberDashboard: React.FC = () => {
                         {daysLeft > 0 ? `${daysLeft} days left` : 'Overdue!'}
                       </span>
                     </div>
+                    <div className="mt-2 text-xs text-muted-foreground font-mono">
+                      Transaction ID: {transaction.status === 'Active' ? transaction._id : '-'}
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canRenew}
+                        onClick={() => handleRenew(transaction._id)}
+                      >
+                        {canRenew ? 'Renew for 14 days' : 'Cannot renew overdue'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => handleRenew(transaction._id)}>
-                  Request Renewal
-                </Button>
               </div>
             )})}
+            
+            {activeTab === 'Borrowed' && borrowedBooks.length === 0 && (
+              <div className="col-span-1 md:col-span-3 text-center py-8 text-muted-foreground">No currently borrowed books.</div>
+            )}
+            
+            {activeTab === 'Reserved' && reservedBooks.map((transaction) => (
+              <div key={transaction._id} className="p-4 rounded-lg border border-border hover:shadow-md transition-all">
+                <div className="flex gap-4">
+                  <div className="w-16 h-24 rounded-lg flex items-center justify-center text-white font-semibold" style={{ backgroundColor: '#8B5CF6' }}>
+                    <BookOpen className="w-8 h-8" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-foreground mb-1">{transaction.book?.title || 'Unknown Book'}</h4>
+                    <p className="text-sm text-muted-foreground mb-2">{transaction.book?.author || 'Unknown Author'}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>Pick up by: {new Date(transaction.dueDate).toLocaleDateString()}</span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                        Reserved
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground font-mono">
+                      Transaction ID: -
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {activeTab === 'Reserved' && reservedBooks.length === 0 && (
+              <div className="col-span-1 md:col-span-3 text-center py-8 text-muted-foreground">No active reservations.</div>
+            )}
+
+            {activeTab === 'History' && pastBooks.map((transaction) => (
+              <div key={transaction._id} className="p-4 rounded-lg border border-border hover:shadow-md transition-all opacity-75">
+                <div className="flex gap-4">
+                  <div className="w-16 h-24 rounded-lg flex items-center justify-center text-white font-semibold" style={{ backgroundColor: '#10B981' }}>
+                    <BookOpen className="w-8 h-8" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-foreground mb-1">{transaction.book?.title || 'Unknown Book'}</h4>
+                    <p className="text-sm text-muted-foreground mb-2">{transaction.book?.author || 'Unknown Author'}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3" />
+                      <span>Returned: {transaction.returnDate ? new Date(transaction.returnDate).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        Returned
+                      </span>
+                    </div>
+                    {transaction.fine > 0 && (
+                      <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                        Fine charged: ${transaction.fine}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {activeTab === 'History' && pastBooks.length === 0 && (
+              <div className="col-span-1 md:col-span-3 text-center py-8 text-muted-foreground">No reading history yet.</div>
+            )}
           </div>
+          )}
         </CardContent>
       </Card>
-
-
 
       <Card>
         <CardHeader>
@@ -200,13 +318,85 @@ export const MemberDashboard: React.FC = () => {
                     } catch (err: any) {
                       alert(err.response?.data?.message || 'Failed to reserve book');
                     }
-                  }}>
-                    Reserve
+                  }} disabled={book.available <= 0}>
+                    {book.available <= 0 ? 'Out of Stock' : 'Reserve'}
                   </Button>
                 </div>
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>My Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Transaction ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Book</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Issue Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Due Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Return Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Fine</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedTransactions.map((transaction) => {
+                    const canRenew = transaction.status === 'Active' && new Date(transaction.dueDate) > new Date();
+                    return (
+                      <tr key={transaction._id} className="border-b border-border last:border-0 hover:bg-accent transition-colors">
+                        <td className="py-3 px-4 text-xs font-mono text-muted-foreground">
+                          {transaction.status === 'Active' ? transaction._id : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-foreground">{transaction.book?.title || 'Unknown Book'}</td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              transaction.status === 'Active'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : transaction.status === 'Reserved'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            }`}
+                          >
+                            {transaction.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">{new Date(transaction.issueDate).toLocaleDateString()}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">{new Date(transaction.dueDate).toLocaleDateString()}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {transaction.returnDate ? new Date(transaction.returnDate).toLocaleDateString() : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-foreground">${transaction.fine || 0}</td>
+                        <td className="py-3 px-4">
+                          {canRenew ? (
+                            <Button size="sm" variant="outline" onClick={() => handleRenew(transaction._id)}>
+                              Renew
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {orderedTransactions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">No transactions found.</div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

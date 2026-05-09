@@ -158,7 +158,11 @@ export const BookManagement: React.FC = () => {
                       <span className="text-xs text-muted-foreground">• {book.available} left</span>
                     </div>
                     <div className="mt-auto pt-4 border-t border-border">
-                      <Button variant="primary" className="w-full" onClick={async () => {
+                      <Button
+                        variant="primary"
+                        className="w-full"
+                        disabled={book.available <= 0}
+                        onClick={async () => {
                         try {
                           await api.post('/api/transactions/reserve', { bookId: book._id });
                           alert('Book reserved successfully!');
@@ -166,8 +170,9 @@ export const BookManagement: React.FC = () => {
                         } catch (err: any) {
                           alert(err.response?.data?.message || 'Failed to reserve book');
                         }
-                      }}>
-                        Reserve Book
+                      }}
+                      >
+                        {book.available <= 0 ? 'Out of Stock' : 'Reserve Book'}
                       </Button>
                     </div>
                   </div>

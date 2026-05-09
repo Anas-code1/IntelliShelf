@@ -1,5 +1,31 @@
 const Transaction = require('../models/Transaction');
 const Book = require('../models/Book');
+const User = require('../models/User');
+const mongoose = require('mongoose');
+
+const findBookByIdentifier = async (identifier) => {
+  const normalized = (identifier || '').trim();
+  if (!normalized) return null;
+
+  if (mongoose.Types.ObjectId.isValid(normalized)) {
+    const byId = await Book.findById(normalized);
+    if (byId) return byId;
+  }
+
+  return Book.findOne({ isbn: normalized });
+};
+
+const findMemberByIdentifier = async (identifier) => {
+  const normalized = (identifier || '').trim();
+  if (!normalized) return null;
+
+  if (mongoose.Types.ObjectId.isValid(normalized)) {
+    const byId = await User.findById(normalized);
+    if (byId) return byId;
+  }
+
+  return User.findOne({ email: normalized.toLowerCase() });
+};
 
 // @desc    Get all transactions
 // @route   GET /api/transactions
@@ -9,7 +35,7 @@ const getTransactions = async (req, res) => {
     const { status } = req.query;
     let query = {};
 
-    if (req.user.role === 'member') {
+    if (req.user.role.toLowerCase() === 'member') {
       query.member = req.user._id;
     }
 
@@ -39,16 +65,23 @@ const getTransactions = async (req, res) => {
 const issueBook = async (req, res) => {
   try {
     const { bookId, memberId, days = 14 } = req.body;
+    const book = await findBookByIdentifier(bookId);
+    const member = await findMemberByIdentifier(memberId);
 
-    const book = await Book.findById(bookId);
     if (!book || book.available <= 0) {
       return res.status(400).json({ message: 'Book not available' });
+    }
+    if (!member) {
+      return res.status(400).json({ message: 'Member not found. Use member ID or email.' });
+    }
+    if (member.role.toLowerCase() !== 'member') {
+      return res.status(400).json({ message: 'Selected user is not a library member' });
     }
 
     // Check if member already has this book active
     const existingTransaction = await Transaction.findOne({
-      book: bookId,
-      member: memberId,
+      book: book._id,
+      member: member._id,
       status: 'Active'
     });
 
@@ -60,8 +93,8 @@ const issueBook = async (req, res) => {
     dueDate.setDate(dueDate.getDate() + days);
 
     const transaction = await Transaction.create({
-      book: bookId,
-      member: memberId,
+      book: book._id,
+      member: member._id,
       dueDate
     });
 
@@ -80,7 +113,14 @@ const issueBook = async (req, res) => {
 // @access  Private/Staff
 const returnBook = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id);
+    const rawId = (req.params.id || '').trim();
+    let transaction = null;
+
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      transaction = await Transaction.findById(rawId);
+    } else {
+      return res.status(400).json({ message: 'Invalid transaction ID format' });
+    }
 
     if (!transaction || transaction.status !== 'Active') {
       return res.status(400).json({ message: 'Valid active transaction not found' });
@@ -187,4 +227,32 @@ const reserveBook = async (req, res) => {
   }
 };
 
-module.exports = { getTransactions, issueBook, returnBook, renewBook, reserveBook };
+// @desc    Approve a reserved book
+// @route   POST /api/transactions/approve/:id
+// @access  Private/Staff
+const approveReservation = async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+
+    if (!transaction || transaction.status !== 'Reserved') {
+      return res.status(400).json({ message: 'Valid reserved transaction not found' });
+    }
+
+    // Set status to Active and set new due date to 14 days from now
+    transaction.status = 'Active';
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 14);
+    transaction.dueDate = dueDate;
+    
+    // We update issueDate to reflect when it actually started
+    transaction.issueDate = new Date();
+
+    await transaction.save();
+
+    res.json(transaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getTransactions, issueBook, returnBook, renewBook, reserveBook, approveReservation };

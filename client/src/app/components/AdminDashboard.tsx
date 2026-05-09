@@ -1,34 +1,117 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './Card';
-import { BookOpen, Users, AlertCircle, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { BookOpen, Users, AlertCircle, TrendingUp, Loader2 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import api from '../../api';
 
-const borrowingTrends = [
-  { month: 'Jan', borrowed: 320, returned: 280 },
-  { month: 'Feb', borrowed: 380, returned: 340 },
-  { month: 'Mar', borrowed: 420, returned: 390 },
-  { month: 'Apr', borrowed: 380, returned: 360 },
-  { month: 'May', borrowed: 450, returned: 420 },
-  { month: 'Jun', borrowed: 490, returned: 460 }
-];
+interface Book {
+  _id: string;
+  category: string;
+}
 
-const categoryData = [
-  { name: 'Fiction', value: 450, color: '#2563EB' },
-  { name: 'Non-Fiction', value: 320, color: '#10B981' },
-  { name: 'Science', value: 280, color: '#F59E0B' },
-  { name: 'History', value: 190, color: '#8B5CF6' },
-  { name: 'Technology', value: 240, color: '#EC4899' }
-];
+interface User {
+  _id: string;
+  role: string;
+}
 
-const recentActivities = [
-  { id: 1, action: 'Book Issued', book: 'The Great Gatsby', member: 'John Doe', time: '10 minutes ago', type: 'issue' },
-  { id: 2, action: 'Book Returned', book: '1984', member: 'Jane Smith', time: '25 minutes ago', type: 'return' },
-  { id: 3, action: 'Fine Paid', book: 'To Kill a Mockingbird', member: 'Bob Johnson', time: '1 hour ago', type: 'payment' },
-  { id: 4, action: 'New Member', book: '-', member: 'Alice Williams', time: '2 hours ago', type: 'member' },
-  { id: 5, action: 'Book Issued', book: 'Pride and Prejudice', member: 'Charlie Brown', time: '3 hours ago', type: 'issue' }
-];
+interface Transaction {
+  _id: string;
+  status: string;
+  issueDate: string;
+  dueDate?: string;
+  returnDate?: string;
+  createdAt?: string;
+  book?: { title?: string };
+  member?: { name?: string };
+}
+
+const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
 export const AdminDashboard: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [booksRes, usersRes, transactionsRes] = await Promise.all([
+          api.get('/api/books'),
+          api.get('/api/users'),
+          api.get('/api/transactions')
+        ]);
+        setBooks(booksRes.data);
+        setUsers(usersRes.data);
+        setTransactions(transactionsRes.data);
+      } catch (error) {
+        console.error('Error loading admin dashboard', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const activeMembers = users.filter(user => user.role === 'member').length;
+  const issuedBooks = transactions.filter(t => t.status === 'Active').length;
+  const overdueBooks = transactions.filter(t => t.status === 'Active' && new Date(t.dueDate || '') < new Date()).length;
+  const trendData = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - index));
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    return {
+      key,
+      month: date.toLocaleString('en-US', { month: 'short' }),
+      borrowed: 0,
+      returned: 0
+    };
+  });
+
+  transactions.forEach((tx) => {
+    const issueDate = new Date(tx.issueDate);
+    const issueKey = `${issueDate.getFullYear()}-${issueDate.getMonth()}`;
+    const issueBucket = trendData.find((item) => item.key === issueKey);
+    if (issueBucket) issueBucket.borrowed += 1;
+
+    if (tx.returnDate) {
+      const returnDate = new Date(tx.returnDate);
+      const returnKey = `${returnDate.getFullYear()}-${returnDate.getMonth()}`;
+      const returnBucket = trendData.find((item) => item.key === returnKey);
+      if (returnBucket) returnBucket.returned += 1;
+    }
+  });
+  const categoryCounts = books.reduce((acc: Record<string, number>, book) => {
+    const key = book.category || 'Other';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const categoryData = Object.entries(categoryCounts).map(([name, value], index) => ({
+    name,
+    value,
+    color: COLORS[index % COLORS.length]
+  }));
+
+  const recentActivities = transactions
+    .slice(0, 8)
+    .map((tx) => ({
+      id: tx._id,
+      action: tx.status === 'Returned' ? 'Book Returned' : tx.status === 'Reserved' ? 'Book Reserved' : 'Book Issued',
+      book: tx.book?.title || 'Unknown Book',
+      member: tx.member?.name || 'Unknown Member',
+      time: new Date(tx.createdAt || tx.issueDate).toLocaleString(),
+      type: tx.status === 'Returned' ? 'return' : tx.status === 'Reserved' ? 'reserve' : 'issue'
+    }));
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -42,12 +125,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Books</p>
-                <h3 className="text-2xl font-bold text-foreground">12,458</h3>
-                <div className="flex items-center gap-1 mt-2">
-                  <ArrowUp className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+12.5%</span>
-                  <span className="text-sm text-muted-foreground">vs last month</span>
-                </div>
+                <h3 className="text-2xl font-bold text-foreground">{books.length}</h3>
               </div>
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -61,12 +139,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Issued Books</p>
-                <h3 className="text-2xl font-bold text-foreground">3,847</h3>
-                <div className="flex items-center gap-1 mt-2">
-                  <ArrowUp className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+8.2%</span>
-                  <span className="text-sm text-muted-foreground">vs last month</span>
-                </div>
+                <h3 className="text-2xl font-bold text-foreground">{issuedBooks}</h3>
               </div>
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -80,12 +153,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Overdue Books</p>
-                <h3 className="text-2xl font-bold text-foreground">127</h3>
-                <div className="flex items-center gap-1 mt-2">
-                  <ArrowDown className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-red-500">-5.3%</span>
-                  <span className="text-sm text-muted-foreground">vs last month</span>
-                </div>
+                <h3 className="text-2xl font-bold text-foreground">{overdueBooks}</h3>
               </div>
               <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -99,12 +167,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Active Members</p>
-                <h3 className="text-2xl font-bold text-foreground">2,341</h3>
-                <div className="flex items-center gap-1 mt-2">
-                  <ArrowUp className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+15.8%</span>
-                  <span className="text-sm text-muted-foreground">vs last month</span>
-                </div>
+                <h3 className="text-2xl font-bold text-foreground">{activeMembers}</h3>
               </div>
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -121,7 +184,7 @@ export const AdminDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={borrowingTrends}>
+              <LineChart data={trendData.map(({ key, ...rest }) => rest)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis dataKey="month" stroke="#64748B" />
                 <YAxis stroke="#64748B" />
@@ -145,7 +208,7 @@ export const AdminDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+                <PieChart>
                 <Pie
                   data={categoryData}
                   cx="50%"
@@ -202,7 +265,7 @@ export const AdminDashboard: React.FC = () => {
                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                             : activity.type === 'return'
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : activity.type === 'payment'
+                            : activity.type === 'reserve'
                             ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                         }`}
